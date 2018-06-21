@@ -47,18 +47,26 @@ class Keystore {
     this.encodedMnemonic = variables.encodedMnemonic
   }
 
-  signMsgHash (msgHash, password) {
-    var privKey = this.decryptString(this.encodedPrivateKey, password)
-    return ethUtil.ecsign(Buffer.from(ethUtil.stripHexPrefix(msgHash), 'hex'), Buffer.from(privKey.substring(2), 'hex'))
+  signMessageHash (msgHash, password) {
+    var privateKey = this.getPrivateKey(password)
+    return ethUtil.ecsign(
+      Buffer.from(ethUtil.stripHexPrefix(signMessageHash), 'hex'),
+      Buffer.from(privKey.substring(2), 'hex')
+    )
   }
 
   getMnemonic (password) {
     var mnemonic = this.decryptString(this.encodedMnemonic, password)
     return mnemonic
   }
+
+  getPrivateKey (password) {
+    var privateKey = this.decryptString(this.encodedPrivateKey, password)
+    return privateKey
+  }
 }
 
-var concatSig = (signature) => {
+var concatSignature = (signature) => {
   var r = signature.r;
   var s = signature.s;
   var v = signature.v;
@@ -73,5 +81,5 @@ var concatSig = (signature) => {
 
 module.exports = {
   Keystore: Keystore,
-  concatSig: concatSig
+  concatSignature: concatSignature
 }

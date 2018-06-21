@@ -1,6 +1,6 @@
 # eth-wallet-light
 
-sample code:
+Sample code:
 
 ```javascript
 const ethWalletLight = require('ethWalletLight')
@@ -14,7 +14,7 @@ var keystore = new ethWalletLight.Keystore()
 keystore.initialize(entropy, password)
 
 // sign message
-var signature = ethWalletLight.concatSig(keystore.signMsgHash(msgHash, password))
+var signature = ethWalletLight.concatSignature(keystore.signMessageHash(msgHash, password))
 
 // serialize to string
 var serialized = ks1.serialize()
@@ -24,8 +24,10 @@ var keystore2 = new ethWalletLight.Keystore()
 ks2.fromSerialized(serialized)
 
 // sign message
-var signature2 = ethWalletLight.concatSig(keystore2.signMsgHash(msgHash, password))
+var signature2 = ethWalletLight.concatSignature(keystore2.signMessageHash(msgHash, password))
 
-// get public address
+// get keystore variables
 var address = ks1.address
+var privateKey = ks1.getPrivateKey(password)
+var mnemonic = ks1.getMnemonic(password)
 ```
