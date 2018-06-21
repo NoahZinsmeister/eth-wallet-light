@@ -5,16 +5,20 @@ const hdkey = require('ethereumjs-wallet/hdkey')
 
 class Keystore {
   initialize (entropy, password) {
-    var hashedEntropy = ethUtil.sha256(entropy).slice(0, 16);
+    if (typeof entropy !== 'string' | typeof password !== 'string') {
+      throw new Error('entropy and password must both be strings')
+    }
+
+    var wordArray = CryptoJS.lib.WordArray.random(256 / 8).toString() // generate extra randomness
+    var hashedEntropy = ethUtil.sha256(entropy + wordArray).slice(0, 16) // hash it all together and take first 16 bytes
 
     var mnemonic = bip39.generateMnemonic(undefined, () => { return hashedEntropy })
     if (!bip39.validateMnemonic(mnemonic)) {
-      throw new Error("invalid mnemonic")
+      throw new Error('invalid mnemonic')
     }
 
     var seed = bip39.mnemonicToSeed(mnemonic)
-    var hdWallet = hdkey.fromMasterSeed(seed).derivePath(`m/44'/60'/0'/0`)
-    var wallet = hdWallet.deriveChild(0).getWallet()
+    var wallet = hdkey.fromMasterSeed(seed).derivePath(`m/44'/60'/0'/0`).deriveChild(0).getWallet()
 
     this.address = wallet.getAddressString()
     this.encodedPrivateKey = this.encryptString(wallet.getPrivateKeyString(), password)
@@ -42,16 +46,16 @@ class Keystore {
 
   fromSerialized (serializedKeystore) {
     var variables = JSON.parse(serializedKeystore)
-    this.publicKey = variables.publicKey,
-    this.encodedPrivateKey = variables.encodedPrivateKey,
+    this.publicKey = variables.publicKey
+    this.encodedPrivateKey = variables.encodedPrivateKey
     this.encodedMnemonic = variables.encodedMnemonic
   }
 
-  signMessageHash (msgHash, password) {
+  signMessageHash (messageHash, password) {
     var privateKey = this.getPrivateKey(password)
     return ethUtil.ecsign(
-      Buffer.from(ethUtil.stripHexPrefix(signMessageHash), 'hex'),
-      Buffer.from(privKey.substring(2), 'hex')
+      Buffer.from(ethUtil.stripHexPrefix(messageHash), 'hex'),
+      Buffer.from(privateKey.substring(2), 'hex')
     )
   }
 
@@ -67,16 +71,16 @@ class Keystore {
 }
 
 var concatSignature = (signature) => {
-  var r = signature.r;
-  var s = signature.s;
-  var v = signature.v;
-  r = ethUtil.fromSigned(r);
-  s = ethUtil.fromSigned(s);
-  v = ethUtil.bufferToInt(v);
-  r = ethUtil.setLengthLeft(ethUtil.toUnsigned(r), 32).toString('hex');
-  s = ethUtil.setLengthLeft(ethUtil.toUnsigned(s), 32).toString('hex');
-  v = ethUtil.stripHexPrefix(ethUtil.intToHex(v));
-  return ethUtil.addHexPrefix(r.concat(s, v).toString("hex"));
+  var r = signature.r
+  var s = signature.s
+  var v = signature.v
+  r = ethUtil.fromSigned(r)
+  s = ethUtil.fromSigned(s)
+  v = ethUtil.bufferToInt(v)
+  r = ethUtil.setLengthLeft(ethUtil.toUnsigned(r), 32).toString('hex')
+  s = ethUtil.setLengthLeft(ethUtil.toUnsigned(s), 32).toString('hex')
+  v = ethUtil.stripHexPrefix(ethUtil.intToHex(v))
+  return ethUtil.addHexPrefix(r.concat(s, v).toString('hex'))
 }
 
 module.exports = {
