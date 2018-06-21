@@ -1,7 +1,6 @@
 const bip39 = require('bip39')
 const CryptoJS = require('crypto-js')
 const ethUtil = require('ethereumjs-util')
-const ethWallet = require('ethereumjs-wallet')
 const hdkey = require('ethereumjs-wallet/hdkey')
 
 class Keystore {
@@ -18,7 +17,6 @@ class Keystore {
     var wallet = hdWallet.deriveChild(0).getWallet()
 
     this.address = wallet.getAddressString()
-
     this.encodedPrivateKey = this.encryptString(wallet.getPrivateKeyString(), password)
     this.encodedMnemonic = this.encryptString(mnemonic, password)
   }
@@ -52,6 +50,11 @@ class Keystore {
   signMsgHash (msgHash, password) {
     var privKey = this.decryptString(this.encodedPrivateKey, password)
     return ethUtil.ecsign(Buffer.from(ethUtil.stripHexPrefix(msgHash), 'hex'), Buffer.from(privKey.substring(2), 'hex'))
+  }
+
+  getMnemonic (password) {
+    var mnemonic = this.decryptString(this.encodedMnemonic, password)
+    return mnemonic
   }
 }
 
