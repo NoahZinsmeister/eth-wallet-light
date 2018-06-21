@@ -17,17 +17,17 @@ keystore.initialize(entropy, password)
 var signature = ethWalletLight.concatSignature(keystore.signMessageHash(msgHash, password))
 
 // serialize to string
-var serialized = ks1.serialize()
+var serialized = keystore.serialize()
 
 // recover from serialized
 var keystore2 = new ethWalletLight.Keystore()
-ks2.fromSerialized(serialized)
+keystore2.fromSerialized(serialized)
 
 // sign message
 var signature2 = ethWalletLight.concatSignature(keystore2.signMessageHash(msgHash, password))
 
 // get keystore variables
-var address = ks1.address
-var privateKey = ks1.getPrivateKey(password)
-var mnemonic = ks1.getMnemonic(password)
+var address = keystore.address
+var privateKey = keystore.getPrivateKey(password)
+var mnemonic = keystore.getMnemonic(password)
 ```
