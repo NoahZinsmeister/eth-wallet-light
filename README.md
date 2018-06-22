@@ -33,12 +33,12 @@ var userProvidedRNG = {}
 main = async () => {
   // initialize using default rng
   defaultRNG.keystore = new ethWalletLight.Keystore()
-  await defaultRNG.keystore.initialize(entropy, password)
+  await defaultRNG.keystore.initializeFromEntropy(entropy, password)
   logKeystoreVariables('Default RNG Initialization', defaultRNG.keystore)
 
   // initialize using user-provided rng
   userProvidedRNG.keystore = new ethWalletLight.Keystore(csprng)
-  await userProvidedRNG.keystore.initialize(entropy, password)
+  await userProvidedRNG.keystore.initializeFromEntropy(entropy, password)
   logKeystoreVariables('User Provided RNG Initialization', userProvidedRNG.keystore)
 
   // serialize to string
@@ -47,13 +47,24 @@ main = async () => {
 
   // recover from serialized
   defaultRNG.fromSerialized = new ethWalletLight.Keystore()
-  defaultRNG.fromSerialized.fromSerialized(defaultRNG.serialized)
+  defaultRNG.fromSerialized.restorefromSerialized(defaultRNG.serialized)
   userProvidedRNG.fromSerialized = new ethWalletLight.Keystore(csprng)
-  userProvidedRNG.fromSerialized.fromSerialized(userProvidedRNG.serialized)
+  userProvidedRNG.fromSerialized.restorefromSerialized(userProvidedRNG.serialized)
 
   // ensure serialization was consistent
   logKeystoreVariables('Default RNG From Serialized', defaultRNG.fromSerialized)
   logKeystoreVariables('User Provided RNG From Serialized', userProvidedRNG.fromSerialized)
+
+  // recover from mnemonic
+  defaultRNG.fromMnemonic = new ethWalletLight.Keystore()
+  await defaultRNG.fromMnemonic.restoreFromMnemonic(defaultRNG.fromSerialized.getMnemonic(password), password)
+
+  userProvidedRNG.fromMnemonic = new ethWalletLight.Keystore(csprng)
+  await userProvidedRNG.fromMnemonic.restoreFromMnemonic(userProvidedRNG.fromSerialized.getMnemonic(password), password)
+
+  // ensure mnemonic recovery was consistent
+  logKeystoreVariables('Default RNG From Mnemonic', defaultRNG.fromMnemonic)
+  logKeystoreVariables('User Provided RNG From Mnemonic', userProvidedRNG.fromMnemonic)
 }
 
 main()

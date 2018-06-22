@@ -7,7 +7,24 @@ const keySize = 32
 const iterations = 100
 const AESBlockSize = 16
 
-class Keystore {
+module.exports.isMnemonicValid = (mnemonic) => {
+  return bip39.validateMnemonic(mnemonic)
+}
+
+module.exports.concatSignature = (signature) => {
+  var r = signature.r
+  var s = signature.s
+  var v = signature.v
+  r = ethUtil.fromSigned(r)
+  s = ethUtil.fromSigned(s)
+  v = ethUtil.bufferToInt(v)
+  r = ethUtil.setLengthLeft(ethUtil.toUnsigned(r), 32).toString('hex')
+  s = ethUtil.setLengthLeft(ethUtil.toUnsigned(s), 32).toString('hex')
+  v = ethUtil.stripHexPrefix(ethUtil.intToHex(v))
+  return ethUtil.addHexPrefix(r.concat(s, v).toString('hex'))
+}
+
+module.exports.Keystore = class Keystore {
   constructor (rng) {
     // rng should be a function that accepts a number of bytes argument and returns an unprefixed hex string
     // see https://github.com/brix/crypto-js/issues/7 for CryptoJS random
@@ -15,7 +32,7 @@ class Keystore {
     this.rng = rng || native
   }
 
-  async initialize (entropy, password) {
+  async initializeFromEntropy (entropy, password) {
     if (typeof entropy !== 'string' || typeof password !== 'string') {
       throw new Error('entropy and password must both be strings')
     }
@@ -24,9 +41,17 @@ class Keystore {
     var extraEntropy = await this.rng(keySize)
     // hash the entropy sources together and take first the 16 bytes (corresponds to 12 seed words)
     var hashedEntropy = ethUtil.sha256(entropy + extraEntropy).slice(0, 16)
-
     var mnemonic = bip39.generateMnemonic(undefined, () => { return hashedEntropy })
-    if (!bip39.validateMnemonic(mnemonic)) throw new Error('invalid mnemonic')
+
+    await this.restoreFromMnemonic(mnemonic, password)
+  }
+
+  async restoreFromMnemonic (mnemonic, password) {
+    if (typeof mnemonic !== 'string' || typeof password !== 'string') {
+      throw new Error('mnemonic and password must both be strings')
+    }
+    if (!module.exports.isMnemonicValid(mnemonic)) throw new Error('invalid mnemonic')
+
     var seed = bip39.mnemonicToSeed(mnemonic)
     var wallet = hdkey.fromMasterSeed(seed).derivePath(`m/44'/60'/0'/0`).deriveChild(0).getWallet()
 
@@ -36,6 +61,14 @@ class Keystore {
     this.address = wallet.getAddressString()
     this.encodedMnemonic = await this.encryptString(mnemonic, key)
     this.encodedPrivateKey = await this.encryptString(wallet.getPrivateKeyString(), key)
+  }
+
+  restorefromSerialized (serializedKeystore) {
+    var variables = JSON.parse(serializedKeystore)
+    this.salt = variables.salt
+    this.address = variables.address
+    this.encodedMnemonic = variables.encodedMnemonic
+    this.encodedPrivateKey = variables.encodedPrivateKey
   }
 
   keyFromPassword (password) {
@@ -75,14 +108,6 @@ class Keystore {
     })
   }
 
-  fromSerialized (serializedKeystore) {
-    var variables = JSON.parse(serializedKeystore)
-    this.salt = variables.salt
-    this.address = variables.address
-    this.encodedMnemonic = variables.encodedMnemonic
-    this.encodedPrivateKey = variables.encodedPrivateKey
-  }
-
   signMessageHash (messageHash, password) {
     var privateKey = this.getPrivateKey(password)
     return ethUtil.ecsign(
@@ -98,22 +123,4 @@ class Keystore {
   getPrivateKey (password) {
     return this.decryptString(this.encodedPrivateKey, this.keyFromPassword(password))
   }
-}
-
-var concatSignature = (signature) => {
-  var r = signature.r
-  var s = signature.s
-  var v = signature.v
-  r = ethUtil.fromSigned(r)
-  s = ethUtil.fromSigned(s)
-  v = ethUtil.bufferToInt(v)
-  r = ethUtil.setLengthLeft(ethUtil.toUnsigned(r), 32).toString('hex')
-  s = ethUtil.setLengthLeft(ethUtil.toUnsigned(s), 32).toString('hex')
-  v = ethUtil.stripHexPrefix(ethUtil.intToHex(v))
-  return ethUtil.addHexPrefix(r.concat(s, v).toString('hex'))
-}
-
-module.exports = {
-  Keystore: Keystore,
-  concatSignature: concatSignature
 }
