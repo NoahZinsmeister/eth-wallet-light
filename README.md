@@ -112,7 +112,14 @@ var logKeystoreVariables = (title, keystore) => {
 var msgHash = '0x9c22ff5f21f0b81b113e63f7db6da94fedef11b2119b4088b89664fb9a3cb658'
 var password = 'mypassword'
 var entropy = '2o3uhrb2i3pbrq32b'
-var csprng = (bytes) => { return crypto.randomBytes(bytes).toString('hex') } // this will vary
+var csprng = (bytes) => { return crypto.randomBytes(bytes).toString('hex') }
+var csprngPromise = (bytes) => {
+  return new Promise(function(resolve, reject) {
+    crypto.randomBytes(bytes, (err, buf) => {
+      err ? reject(err) : resolve(buf.toString('hex'))
+    })
+  })
+}
 
 var defaultRNG = {}
 var userRNG = {}
