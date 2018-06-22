@@ -3,7 +3,7 @@ const CryptoJS = require('crypto-js')
 const ethUtil = require('ethereumjs-util')
 const hdkey = require('ethereumjs-wallet/hdkey')
 
-const keySize = 20
+const keySize = 32
 const iterations = 10
 const AESBlockSize = 16
 
@@ -40,8 +40,8 @@ module.exports.Keystore = class Keystore {
       throw new Error('entropy and password must both be strings')
     }
 
-    // generate extra randomness
-    var extraEntropy = await this.rng(keySize)
+    // generate extra randomness of the same size as the hash function
+    var extraEntropy = await this.rng(32)
     // hash the entropy sources together and take first the 16 bytes (corresponds to 12 seed words)
     var hashedEntropy = ethUtil.sha256(entropy + extraEntropy).slice(0, 16)
     var mnemonic = bip39.generateMnemonic(undefined, () => { return hashedEntropy })
@@ -84,6 +84,7 @@ module.exports.Keystore = class Keystore {
   keyFromPassword (password) {
     return CryptoJS.PBKDF2(password, this.salt, {
       keySize: keySize / 4, // 1 word := 4 bytes
+      hasher: CryptoJS.algo.SHA256,
       iterations: iterations
     })
   }
