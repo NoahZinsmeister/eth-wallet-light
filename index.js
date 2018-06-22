@@ -12,14 +12,17 @@ class Keystore {
       throw new Error('entropy and password must both be strings')
     }
 
-    var extraEntropy = CryptoJS.lib.WordArray.random(256 / 8).toString() // generate extra randomness
-    var hashedEntropy = ethUtil.sha256(entropy + extraEntropy).slice(0, 16) // hash it together and take first 16 bytes
+    // generate extra randomness, see https://github.com/brix/crypto-js/issues/7
+    var extraEntropy = CryptoJS.lib.WordArray.random(keySize).toString()
+    // hash the entropy sources together and take first the 16 bytes (corresponds to 12 seed words)
+    var hashedEntropy = ethUtil.sha256(entropy + extraEntropy).slice(0, 16)
 
     var mnemonic = bip39.generateMnemonic(undefined, () => { return hashedEntropy })
     if (!bip39.validateMnemonic(mnemonic)) throw new Error('invalid mnemonic')
     var seed = bip39.mnemonicToSeed(mnemonic)
     var wallet = hdkey.fromMasterSeed(seed).derivePath(`m/44'/60'/0'/0`).deriveChild(0).getWallet()
 
+    // salt should be the same size as the hash function output, sha256 in this case i.e. 32 bytes
     this.salt = CryptoJS.lib.WordArray.random(keySize)
     var key = this.keyFromPassword(password)
     this.address = wallet.getAddressString()
@@ -36,7 +39,7 @@ class Keystore {
   }
 
   encryptString (string, password) {
-    var iv = CryptoJS.lib.WordArray.random(16)
+    var iv = CryptoJS.lib.WordArray.random(16) // 16 bytes is the AES block size
     var ciphertext = CryptoJS.AES.encrypt(string, this.keyFromPassword(password), { iv: iv })
 
     return {
