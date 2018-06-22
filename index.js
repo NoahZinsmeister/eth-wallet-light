@@ -3,8 +3,8 @@ const CryptoJS = require('crypto-js')
 const ethUtil = require('ethereumjs-util')
 const hdkey = require('ethereumjs-wallet/hdkey')
 
-const keySize = 32
-const iterations = 100
+const keySize = 20
+const iterations = 10
 const AESBlockSize = 16
 
 module.exports.isMnemonicValid = (mnemonic) => {
@@ -60,7 +60,7 @@ module.exports.Keystore = class Keystore {
     var seed = bip39.mnemonicToSeed(mnemonic)
     var wallet = hdkey.fromMasterSeed(seed).derivePath(`m/44'/60'/0'/0`).deriveChild(0).getWallet()
 
-    // salt should be the same size as the hash function output, sha256 in this case i.e. 32 bytes
+    // salt should be the same size as the hash function output
     this.salt = await this.rng(keySize)
     var key = this.keyFromPassword(password)
     this.address = wallet.getAddressString()
@@ -84,7 +84,6 @@ module.exports.Keystore = class Keystore {
   keyFromPassword (password) {
     return CryptoJS.PBKDF2(password, this.salt, {
       keySize: keySize / 4, // 1 word := 4 bytes
-      hasher: CryptoJS.algo.SHA256,
       iterations: iterations
     })
   }
