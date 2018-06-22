@@ -1,36 +1,60 @@
 # eth-wallet-light
 
-Sample code:
+## Installation
+
+`npm install NoahHydro/eth-wallet-light`
+
+## Sample Code
+Keystores can optionally be initialized with a custom RNG function whose argument is the number of bytes, and returns a random hex string of that many bytes **without the 0x prefix**. THIS IS HIGHLY RECOMMENDED, as the default RNG used is not a CSPRNG.
 
 ```javascript
 const ethWalletLight = require('eth-wallet-light')
+const crypto = require('crypto') // in react native, this should be react-native-securerandom
+
+// helper function to log keystore variables
+var logKeystoreVariables = (title, keystore) => {
+  console.log(title)
+  console.log('-'.repeat(title.length))
+  console.log('Address: ', keystore.address)
+  console.log('Mnemonic: ', keystore.getMnemonic(password))
+  console.log('Private Key: ', keystore.getPrivateKey(password))
+  console.log('Signature:', ethWalletLight.concatSignature(keystore.signMessageHash(msgHash, password)))
+  console.log("\n")
+}
 
 var msgHash = '0x9c22ff5f21f0b81b113e63f7db6da94fedef11b2119b4088b89664fb9a3cb658'
 var password = 'mypassword'
 var entropy = '2o3uhrb2i3pbrq32b'
+var csprng = (bytes) => { return crypto.randomBytes(bytes).toString('hex') } // this will vary
 
-// initialize
-var keystore = new ethWalletLight.Keystore()
-keystore.initialize(entropy, password)
+var defaultRNG = {}
+var userProvidedRNG = {}
 
-// sign message
-var signature = ethWalletLight.concatSignature(keystore.signMessageHash(msgHash, password))
+main = async () => {
+  // initialize using default rng
+  defaultRNG.keystore = new ethWalletLight.Keystore()
+  await defaultRNG.keystore.initialize(entropy, password)
+  logKeystoreVariables('Default RNG Initialization', defaultRNG.keystore)
 
-// serialize to string
-var serialized = keystore.serialize()
+  // initialize using user-provided rng
+  userProvidedRNG.keystore = new ethWalletLight.Keystore(csprng)
+  await userProvidedRNG.keystore.initialize(entropy, password)
+  logKeystoreVariables('User Provided RNG Initialization', userProvidedRNG.keystore)
 
-// recover from serialized
-var keystore2 = new ethWalletLight.Keystore()
-keystore2.fromSerialized(serialized)
+  // serialize to string
+  defaultRNG.serialized = defaultRNG.keystore.serialize()
+  userProvidedRNG.serialized = userProvidedRNG.keystore.serialize()
 
-// sign message
-var signature2 = ethWalletLight.concatSignature(keystore2.signMessageHash(msgHash, password))
+  // recover from serialized
+  defaultRNG.fromSerialized = new ethWalletLight.Keystore()
+  defaultRNG.fromSerialized.fromSerialized(defaultRNG.serialized)
+  userProvidedRNG.fromSerialized = new ethWalletLight.Keystore(csprng)
+  userProvidedRNG.fromSerialized.fromSerialized(userProvidedRNG.serialized)
 
-// get keystore variables
-console.log("Address: ", keystore.address)
-console.log("Mnemonic: ", keystore.getMnemonic(password))
-console.log("Private Key: ", keystore.getPrivateKey(password))
+  // ensure serialization was consistent
+  logKeystoreVariables('Default RNG From Serialized', defaultRNG.fromSerialized)
+  logKeystoreVariables('User Provided RNG From Serialized', userProvidedRNG.fromSerialized)
+}
 
-console.log("Signature 1:", signature)
-console.log("Signature 2:", signature2)
+main()
 ```

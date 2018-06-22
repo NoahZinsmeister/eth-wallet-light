@@ -5,15 +5,23 @@ const hdkey = require('ethereumjs-wallet/hdkey')
 
 const keySize = 32
 const iterations = 100
+const AESBlockSize = 16
 
 class Keystore {
-  initialize (entropy, password) {
+  constructor (rng) {
+    // rng should be a function that accepts a number of bytes argument and returns an unprefixed hex string
+    // see https://github.com/brix/crypto-js/issues/7 for CryptoJS random
+    var native = (bytes) => { return CryptoJS.lib.WordArray.random(bytes).toString() }
+    this.rng = rng || native
+  }
+
+  async initialize (entropy, password) {
     if (typeof entropy !== 'string' || typeof password !== 'string') {
       throw new Error('entropy and password must both be strings')
     }
 
-    // generate extra randomness, see https://github.com/brix/crypto-js/issues/7
-    var extraEntropy = CryptoJS.lib.WordArray.random(keySize).toString()
+    // generate extra randomness
+    var extraEntropy = await this.rng(keySize)
     // hash the entropy sources together and take first the 16 bytes (corresponds to 12 seed words)
     var hashedEntropy = ethUtil.sha256(entropy + extraEntropy).slice(0, 16)
 
@@ -23,11 +31,11 @@ class Keystore {
     var wallet = hdkey.fromMasterSeed(seed).derivePath(`m/44'/60'/0'/0`).deriveChild(0).getWallet()
 
     // salt should be the same size as the hash function output, sha256 in this case i.e. 32 bytes
-    this.salt = CryptoJS.lib.WordArray.random(keySize)
+    this.salt = await this.rng(keySize)
     var key = this.keyFromPassword(password)
     this.address = wallet.getAddressString()
-    this.encodedMnemonic = this.encryptString(mnemonic, key)
-    this.encodedPrivateKey = this.encryptString(wallet.getPrivateKeyString(), key)
+    this.encodedMnemonic = await this.encryptString(mnemonic, key)
+    this.encodedPrivateKey = await this.encryptString(wallet.getPrivateKeyString(), key)
   }
 
   keyFromPassword (password) {
@@ -38,8 +46,13 @@ class Keystore {
     })
   }
 
-  encryptString (string, password) {
-    var iv = CryptoJS.lib.WordArray.random(16) // 16 bytes is the AES block size
+  async encryptString (string, password) {
+    var randomBytes = await this.rng(AESBlockSize)
+    var words = []
+    for (var i = 0; i < AESBlockSize * 2; i += 8) {
+      words.push('0x' + randomBytes.substring(i, i + 8))
+    }
+    var iv = new CryptoJS.lib.WordArray.init(words, AESBlockSize)
     var ciphertext = CryptoJS.AES.encrypt(string, this.keyFromPassword(password), { iv: iv })
 
     return {
