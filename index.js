@@ -29,7 +29,10 @@ module.exports.Keystore = class Keystore {
     // rng should be a function that accepts a number of bytes argument and returns an unprefixed hex string
     // see https://github.com/brix/crypto-js/issues/7 for CryptoJS random
     var native = (bytes) => { return CryptoJS.lib.WordArray.random(bytes).toString() }
-    this.rng = rng || native
+
+    rng = rng || native
+
+    this.rng = (bytes) => { return ethUtil.stripHexPrefix(rng(bytes)) }
   }
 
   async initializeFromEntropy (entropy, password) {
@@ -43,7 +46,9 @@ module.exports.Keystore = class Keystore {
     var hashedEntropy = ethUtil.sha256(entropy + extraEntropy).slice(0, 16)
     var mnemonic = bip39.generateMnemonic(undefined, () => { return hashedEntropy })
 
-    await this.restoreFromMnemonic(mnemonic, password)
+    var keystore = await this.restoreFromMnemonic(mnemonic, password)
+
+    return keystore
   }
 
   async restoreFromMnemonic (mnemonic, password) {
@@ -61,14 +66,19 @@ module.exports.Keystore = class Keystore {
     this.address = wallet.getAddressString()
     this.encodedMnemonic = await this.encryptString(mnemonic, key)
     this.encodedPrivateKey = await this.encryptString(wallet.getPrivateKeyString(), key)
+
+    return this
   }
 
   restorefromSerialized (serializedKeystore) {
     var variables = JSON.parse(serializedKeystore)
+
     this.salt = variables.salt
     this.address = variables.address
     this.encodedMnemonic = variables.encodedMnemonic
     this.encodedPrivateKey = variables.encodedPrivateKey
+
+    return this
   }
 
   keyFromPassword (password) {
@@ -122,5 +132,9 @@ module.exports.Keystore = class Keystore {
 
   getPrivateKey (password) {
     return this.decryptString(this.encodedPrivateKey, this.keyFromPassword(password))
+  }
+
+  getAddress () {
+    return this.address
   }
 }
