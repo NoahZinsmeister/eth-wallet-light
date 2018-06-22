@@ -3,52 +3,68 @@ const CryptoJS = require('crypto-js')
 const ethUtil = require('ethereumjs-util')
 const hdkey = require('ethereumjs-wallet/hdkey')
 
+const keySize = 32
+const iterations = 100
+
 class Keystore {
   initialize (entropy, password) {
-    if (typeof entropy !== 'string' | typeof password !== 'string') {
+    if (typeof entropy !== 'string' || typeof password !== 'string') {
       throw new Error('entropy and password must both be strings')
     }
 
-    var wordArray = CryptoJS.lib.WordArray.random(256 / 8).toString() // generate extra randomness
-    var hashedEntropy = ethUtil.sha256(entropy + wordArray).slice(0, 16) // hash it all together and take first 16 bytes
+    var extraEntropy = CryptoJS.lib.WordArray.random(256 / 8).toString() // generate extra randomness
+    var hashedEntropy = ethUtil.sha256(entropy + extraEntropy).slice(0, 16) // hash it together and take first 16 bytes
 
     var mnemonic = bip39.generateMnemonic(undefined, () => { return hashedEntropy })
-    if (!bip39.validateMnemonic(mnemonic)) {
-      throw new Error('invalid mnemonic')
-    }
-
+    if (!bip39.validateMnemonic(mnemonic)) throw new Error('invalid mnemonic')
     var seed = bip39.mnemonicToSeed(mnemonic)
     var wallet = hdkey.fromMasterSeed(seed).derivePath(`m/44'/60'/0'/0`).deriveChild(0).getWallet()
 
+    this.salt = CryptoJS.lib.WordArray.random(keySize)
+    var key = this.keyFromPassword(password)
     this.address = wallet.getAddressString()
-    this.encodedPrivateKey = this.encryptString(wallet.getPrivateKeyString(), password)
-    this.encodedMnemonic = this.encryptString(mnemonic, password)
+    this.encodedMnemonic = this.encryptString(mnemonic, key)
+    this.encodedPrivateKey = this.encryptString(wallet.getPrivateKeyString(), key)
+  }
+
+  keyFromPassword (password) {
+    return CryptoJS.PBKDF2(password, this.salt, {
+      keySize: keySize,
+      hasher: CryptoJS.algo.SHA256,
+      iterations: iterations
+    })
   }
 
   encryptString (string, password) {
-    var ciphertext = CryptoJS.AES.encrypt(string, password)
-    return ciphertext.toString()
+    var iv = CryptoJS.lib.WordArray.random(16)
+    var ciphertext = CryptoJS.AES.encrypt(string, this.keyFromPassword(password), { iv: iv })
+
+    return {
+      ciphertext: ciphertext.toString(),
+      iv: iv
+    }
   }
 
-  decryptString (ciphertext, password) {
-    var bytes = CryptoJS.AES.decrypt(ciphertext, password)
-    var plaintext = bytes.toString(CryptoJS.enc.Utf8)
-    return plaintext
+  decryptString (encrypted, password) {
+    var decrypted = CryptoJS.AES.decrypt(encrypted.ciphertext, this.keyFromPassword(password), { iv: encrypted.iv })
+    return decrypted.toString(CryptoJS.enc.Utf8)
   }
 
   serialize () {
     return JSON.stringify({
-      publicKey: this.publicKey,
-      encodedPrivateKey: this.encodedPrivateKey,
-      encodedMnemonic: this.encodedMnemonic
+      salt: this.salt,
+      address: this.address,
+      encodedMnemonic: this.encodedMnemonic,
+      encodedPrivateKey: this.encodedPrivateKey
     })
   }
 
   fromSerialized (serializedKeystore) {
     var variables = JSON.parse(serializedKeystore)
-    this.publicKey = variables.publicKey
-    this.encodedPrivateKey = variables.encodedPrivateKey
+    this.salt = variables.salt
+    this.address = variables.address
     this.encodedMnemonic = variables.encodedMnemonic
+    this.encodedPrivateKey = variables.encodedPrivateKey
   }
 
   signMessageHash (messageHash, password) {
@@ -60,13 +76,11 @@ class Keystore {
   }
 
   getMnemonic (password) {
-    var mnemonic = this.decryptString(this.encodedMnemonic, password)
-    return mnemonic
+    return this.decryptString(this.encodedMnemonic, this.keyFromPassword(password))
   }
 
   getPrivateKey (password) {
-    var privateKey = this.decryptString(this.encodedPrivateKey, password)
-    return privateKey
+    return this.decryptString(this.encodedPrivateKey, this.keyFromPassword(password))
   }
 }
 
