@@ -32,7 +32,7 @@ class Keystore {
 
   keyFromPassword (password) {
     return CryptoJS.PBKDF2(password, this.salt, {
-      keySize: keySize,
+      keySize: keySize / 4, // 1 word := 4 bytes
       hasher: CryptoJS.algo.SHA256,
       iterations: iterations
     })
