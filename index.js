@@ -4,7 +4,7 @@ const ethUtil = require('ethereumjs-util')
 const hdkey = require('ethereumjs-wallet/hdkey')
 
 const keySize = 32
-const iterations = 10000
+const iterations = 250
 const AESBlockSize = 16
 
 module.exports.isMnemonicValid = (mnemonic) => {
