@@ -1,5 +1,7 @@
 # eth-wallet-light
 
+[![Greenkeeper badge](https://badges.greenkeeper.io/NoahHydro/eth-wallet-light.svg)](https://greenkeeper.io/)
+
 A lightweight Ethereum wallet with bip39 seed words, and no dependency on the Node crypto module. Sensitive data in keystores, either in memory or serialized, are always securely encrypted. Keystores can optionally be initialized with a custom RNG. **THIS IS HIGHLY RECOMMENDED**, as the default RNG used is not a CSPRNG.
 
 ## Installation
