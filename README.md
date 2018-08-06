@@ -36,7 +36,7 @@ This is the constructor for new keystores. Does not create a keypair.
 **Returns** Keystore
 
 ### keystore.initializeFromEntropy(entropy, password)
-This method initializes a keystore with a new random keypair.
+This method initializes a keystore with a new random keypair. The password is used to encrypt the initialized keystore.
 
 **Options**
 - entropy (required): A string of entropy. Will be hashed with 32 bytes of output from the keystore's `rng` to produce 16 bytes of randomness that is fed to the BIP39 mnemonic generator.
@@ -45,7 +45,7 @@ This method initializes a keystore with a new random keypair.
 **Returns** Promise(Keystore)
 
 ### keystore.restoreFromMnemonic(mnemonic, password)
-This method initializes a keystore, restoring a keypair from a mnemonic.
+This method initializes a keystore, restoring a keypair from a mnemonic. The password is used to encrypt the initialized keystore.
 
 **Options**
 - menemonic (required): 12 BIP39-compliant seed words. Can be used to recover backed-up or new accounts.
@@ -54,7 +54,7 @@ This method initializes a keystore, restoring a keypair from a mnemonic.
 **Returns** Promise(Keystore)
 
 ### keystore.restorefromSerialized(serializedKeystore)
-This method restores a keystore from serialization.
+This method restores a keystore from serialization. Note that when restoring from a serialized keystore, the `rng` argument to the keystore constructor is unnecessary, and can safely be left as `undefined`.
 
 **Options**
 - serializedKeystore (required): The output of `keystore.serialize()`.
@@ -98,67 +98,31 @@ Get the public address from the keystore.
 
 ## Sample Code
 
+Check [`test/test.js`](./test/test.js) for exhaustive usage examples. Some starter code:
+
 ```javascript
 const wallet = require('eth-wallet-light')
-const crypto = require('crypto') // in react native, this should be react-native-securerandom
 
-// helper function to log keystore variables
-var logKeystoreVariables = (title, keystore) => {
-  console.log(title)
-  console.log('-'.repeat(title.length))
-  console.log('Address: ', keystore.getAddress())
-  console.log('Mnemonic: ', keystore.getMnemonic(password))
-  console.log('Private Key: ', keystore.getPrivateKey(password))
-  console.log('Signature:', wallet.concatSignature(keystore.signMessageHash(msgHash, password)))
-  console.log('\n')
-}
+const password = 'mypassword' // this should be a real password
 
-var msgHash = '0x9c22ff5f21f0b81b113e63f7db6da94fedef11b2119b4088b89664fb9a3cb658'
-var password = 'mypassword'
-var entropy = '2o3uhrb2i3pbrq32b'
-var csprng = (bytes) => { return crypto.randomBytes(bytes).toString('hex') }
-var csprngPromise = (bytes) => {
+var keystore = await new wallet.Keystore().initializeFromEntropy(entropy, password)
+console.log('Address: ', keystore.getAddress())
+
+var messageHash = '0x9c22ff5f21f0b81b113e63f7db6da94fedef11b2119b4088b89664fb9a3cb658'
+var signature = wallet.concatSignature(keystore.signMessageHash(messageHash, password))
+console.log('Signature:', signature)
+```
+
+In Node, here are two example `rng` functions that are both CSPRNGs. In React Native, this code should instead rely on something like [react-native-securerandom](https://github.com/rh389/react-native-securerandom).
+
+```javascript
+const crypto = require('crypto')
+
+const csprng = (bytes) => { return crypto.randomBytes(bytes).toString('hex') }
+const csprngPromise = (bytes) => {
   return new Promise(function(resolve, reject) {
     crypto.randomBytes(bytes, (err, buf) => {
       err ? reject(err) : resolve(buf.toString('hex'))
     })
   })
 }
-
-var defaultRNG = {}
-var userRNG = {}
-
-var main = async () => {
-  // initialize using default rng
-  defaultRNG.keystore = await new wallet.Keystore().initializeFromEntropy(entropy, password)
-  logKeystoreVariables('Default RNG Initialization', defaultRNG.keystore)
-
-  // initialize using user-provided rng
-  userRNG.keystore = await new wallet.Keystore(csprng).initializeFromEntropy(entropy, password)
-  logKeystoreVariables('User Provided RNG Initialization', userRNG.keystore)
-
-  // serialize to string
-  defaultRNG.serialized = defaultRNG.keystore.serialize()
-  userRNG.serialized = userRNG.keystore.serialize()
-
-  // recover from serialized
-  defaultRNG.fromSerialized = await new wallet.Keystore().restorefromSerialized(defaultRNG.serialized)
-  userRNG.fromSerialized = await new wallet.Keystore(csprng).restorefromSerialized(userRNG.serialized)
-
-  // ensure serialization was consistent
-  logKeystoreVariables('Default RNG From Serialized', defaultRNG.fromSerialized)
-  logKeystoreVariables('User Provided RNG From Serialized', userRNG.fromSerialized)
-
-  // recover from mnemonic
-  defaultRNG.mnemonic = defaultRNG.fromSerialized.getMnemonic(password)
-  defaultRNG.fromMnemonic = await new wallet.Keystore().restoreFromMnemonic(defaultRNG.mnemonic, password)
-  userRNG.mnemonic = userRNG.fromSerialized.getMnemonic(password)
-  userRNG.fromMnemonic = await new wallet.Keystore(csprng).restoreFromMnemonic(userRNG.mnemonic, password)
-
-  // ensure mnemonic recovery was consistent
-  logKeystoreVariables('Default RNG From Mnemonic', defaultRNG.fromMnemonic)
-  logKeystoreVariables('User Provided RNG From Mnemonic', userRNG.fromMnemonic)
-}
-
-main()
-```
