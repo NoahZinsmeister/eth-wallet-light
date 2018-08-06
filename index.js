@@ -1,4 +1,4 @@
-const bip39 = require('bip39')
+const bip39 = require('bip39') // a forked version, see package.json
 const CryptoJS = require('crypto-js')
 const ethUtil = require('ethereumjs-util')
 const hdkey = require('ethereumjs-wallet/hdkey')

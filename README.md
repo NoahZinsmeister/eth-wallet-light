@@ -1,6 +1,10 @@
 # eth-wallet-light
 
-A lightweight Ethereum wallet with bip39 seed words, and no dependency on the Node crypto module. Sensitive data in keystores, either in memory or serialized, are always securely encrypted. Keystores can optionally be initialized with a custom RNG. **THIS IS HIGHLY RECOMMENDED**, as the default RNG used is not a CSPRNG.
+A lightweight, pure JS Ethereum wallet optimized for mobile. Inspired in part by the Consensys [eth-lightwallet](https://github.com/ConsenSys/eth-lightwallet). **This code has not been independently audited, use at your own risk**. Features include:
+- No dependency on the Node crypto module. This fact makes the library ideal for use in e.g. React Native.
+- BIP39 seed words, from a [fork of the canonical library](https://github.com/NoahHydro/bip39) that removes dependency on Node crypto.
+- Keystores, when stored in-memory or as serialized keystore objects, are always securely encrypted with PBKDF2. All functions accessing sensitive information require a password.
+- Keystores can optionally be initialized with a custom RNG for additional randomness. **THIS IS HIGHLY RECOMMENDED**, as the default RNG used is not a CSPRNG.
 
 ## Installation
 
@@ -13,7 +17,7 @@ A lightweight Ethereum wallet with bip39 seed words, and no dependency on the No
 Checks the validity of the passed mnemonic.
 
 **Options**
-- mnemonic (required): A 12-word bip39 seed phrase.
+- mnemonic (required): A 12-word BIP39 seed phrase.
 
 ### wallet.concatSignature(signature)
 Concatenates the output of `keystore.signMessageHash` into a single hex string.
@@ -32,19 +36,19 @@ This is the constructor for new keystores. Does not create a keypair.
 **Returns** Keystore
 
 ### keystore.initializeFromEntropy(entropy, password)
-This method initializes a new keystore. Creates a keypair.
+This method initializes a keystore with a new random keypair.
 
 **Options**
-- entropy (required): A string of entropy. Will be hashed with 32 bytes of output from the keystore's `rng` to produce 16 bytes of randomness that is fed to the bip39 mnemonic generator.
+- entropy (required): A string of entropy. Will be hashed with 32 bytes of output from the keystore's `rng` to produce 16 bytes of randomness that is fed to the BIP39 mnemonic generator.
 - password (required): A string password that will be fed to PBKDF2 to produce a key that will encrypt the sensitive contents of the keystore.
 
 **Returns** Promise(Keystore)
 
 ### keystore.restoreFromMnemonic(mnemonic, password)
-This method initializes a new keystore. Enables a keypair gneerated from the mnemonic.
+This method initializes a keystore, restoring a keypair from a mnemonic.
 
 **Options**
-- menemonic (required): 12 bip39-compliant seed words. Can be used to recover backed-up or new accounts.
+- menemonic (required): 12 BIP39-compliant seed words. Can be used to recover backed-up or new accounts.
 - password (required): A string password that will be fed to PBKDF2 to produce a key that will encrypt the sensitive contents of the keystore.
 
 **Returns** Promise(Keystore)
