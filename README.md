@@ -2,13 +2,13 @@
 
 A lightweight, pure JS Ethereum wallet optimized for mobile. Inspired in part by the Consensys [eth-lightwallet](https://github.com/ConsenSys/eth-lightwallet). **This code has not been independently audited, use at your own risk**. Features include:
 - No dependency on the Node crypto module. This fact makes the library ideal for use in e.g. React Native.
-- BIP39 seed words, from a [fork of the canonical library](https://github.com/NoahHydro/bip39) that removes dependency on Node crypto.
+- BIP39 seed words, from a [fork of the canonical library](https://github.com/NoahZinsmeister/bip39) that removes dependency on Node crypto.
 - Keystores, when stored in-memory or as serialized keystore objects, are always securely encrypted with PBKDF2. All functions accessing sensitive information require a password.
 - Keystores can optionally be initialized with a custom RNG for additional randomness. **THIS IS HIGHLY RECOMMENDED**, as the default RNG used is not a CSPRNG.
 
 ## Installation
 
-`npm install NoahHydro/eth-wallet-light`
+`npm install NoahZinsmeister/eth-wallet-light`
 
 `const wallet = require('eth-wallet-light')`
 

@@ -8,17 +8,17 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/NoahHydro/eth-wallet-light.git"
+    "url": "git+https://github.com/NoahZinsmeister/eth-wallet-light.git"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/NoahHydro/eth-wallet-light/issues"
+    "url": "https://github.com/NoahZinsmeister/eth-wallet-light/issues"
   },
-  "homepage": "https://github.com/NoahHydro/eth-wallet-light#readme",
+  "homepage": "https://github.com/NoahZinsmeister/eth-wallet-light#readme",
   "dependencies": {
-    "bip39": "github:NoahHydro/bip39",
+    "bip39": "github:NoahZinsmeister/bip39",
     "crypto-js": "^3.1.9-1",
     "ethereumjs-util": "^5.2.0",
     "ethereumjs-wallet": "^0.6.0"
